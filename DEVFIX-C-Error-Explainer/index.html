@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DEVFIX — C Error Explainer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="badge">⚡ DEVFIX</div>
+    <h1>Turn C coding errors into understandable solutions.</h1>
+    <p>Paste an error, choose C, and get a beginner-friendly explanation.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="step"><span>1</span><div><h2>Enter an error</h2><p>Paste the compiler/runtime error you don't understand.</p></div></div>
+      <textarea id="errorInput" placeholder="Example: error: expected ';' before 'return'"></textarea>
+
+      <div class="step"><span>2</span><div><h2>Select a programming language</h2><p>DEVFIX currently focuses on C.</p></div></div>
+      <select id="language">
+        <option value="c">C</option>
+        <option value="cpp">C++</option>
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+      </select>
+
+      <button id="fixBtn">🔍 Explain this error</button>
+    </section>
+
+    <section id="result" class="card result hidden">
+      <div class="step"><span>3</span><div><h2>Understand the problem</h2><p>Here is the error explained in simple language.</p></div></div>
+
+      <div class="result-grid">
+        <article>
+          <h3>📌 What happened?</h3>
+          <p id="happened"></p>
+        </article>
+        <article>
+          <h3>🤔 Why might it happen?</h3>
+          <p id="why"></p>
+        </article>
+        <article>
+          <h3>🛠️ How can I fix it?</h3>
+          <p id="fix"></p>
+        </article>
+        <article class="cause">
+          <h3>💡 Possible cause</h3>
+          <p id="cause"></p>
+        </article>
+      </div>
+
+      <div class="code-box">
+        <h3>Suggested solution</h3>
+        <pre id="solution"></pre>
+      </div>
+    </section>
+
+    <section class="tips">
+      <h2>Common C errors</h2>
+      <div class="tip-list">
+        <span>Missing semicolon</span>
+        <span>scanf without &amp;</span>
+        <span>Wrong printf format</span>
+        <span>Undeclared variable</span>
+        <span>Array out of bounds</span>
+        <span>Division by zero</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>DEVFIX • C Error Explainer • Built for beginners</footer>
+  <script src="script.js"></script>
+</body>
+</html>
