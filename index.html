@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevFix – Turn coding errors into understandable solutions</title>
+<style>
+:root{--bg:#14110f;--panel:#1e1a17;--line:#3a322c;--text:#f1e9e1;--mute:#a89b8f;--ember:#ff6a2b;--ok:#7fd1a0;--code:#0d0b0a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:clamp(2rem,6vw,3.2rem);margin:0 0 6px;letter-spacing:-.02em}
+h1 span{color:var(--ember)}
+.sub{color:var(--mute);margin:0 0 32px;max-width:60ch}
+label{display:block;font-weight:600;margin:0 0 6px}
+textarea,select{width:100%;background:var(--code);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:12px;font:15px/1.5 ui-monospace,Consolas,monospace}
+textarea{min-height:110px;resize:vertical}
+textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:18px}
+.row>div{flex:1 1 200px}
+button{background:var(--ember);color:#1a0d05;border:0;border-radius:8px;padding:12px 22px;font:700 16px inherit;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:600}
+button:hover{filter:brightness(1.1)}
+.examples{margin-top:14px;color:var(--mute);font-size:14px}
+.examples button{padding:4px 10px;font-size:13px;margin:4px 4px 0 0}
+#out{margin-top:36px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{margin:0 0 6px;font-size:1.05rem;color:var(--ember)}
+.card p{margin:0}
+.fix{border-color:var(--ok)}
+.fix h2{color:var(--ok)}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;margin:10px 0 0;font:14px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap}
+.tag{display:inline-block;background:var(--code);border:1px solid var(--line);border-radius:99px;padding:2px 12px;font-size:13px;color:var(--mute);margin-bottom:12px}
+ol{margin:8px 0 0;padding-left:20px}
+.hint{color:var(--mute);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Dev<span>Fix</span></h1>
+  <p class="sub">Paste an error, pick the language, and get a plain-English explanation: what happened, why it happens, and how to fix it.</p>
+
+  <label for="err">Error message</label>
+  <textarea id="err" placeholder="TypeError: Cannot read properties of undefined (reading 'name')" spellcheck="false"></textarea>
+
+  <div class="row">
+    <div>
+      <label for="lang">Programming language</label>
+      <select id="lang">
+        <option>JavaScript</option><option>Python</option><option>Java</option><option>C++</option><option>Other</option>
+      </select>
+    </div>
+    <button id="go">Explain this error</button>
+    <button id="clear" class="ghost">Clear</button>
+  </div>
+
+  <div class="examples">Try an example:
+    <span id="ex"></span>
+  </div>
+
+  <section id="out" aria-live="polite"></section>
+</main>
+
+<script>
+// ---------- Knowledge base ----------
+// Each rule: languages it applies to (null = any), regex, and the explanation.
+const RULES = [
+ // JavaScript
+ {l:["JavaScript"],re:/cannot read propert(y|ies) of (undefined|null)/i,
+  title:"Reading a property of undefined/null",
+  what:"Your code tried to access a property (like user.name) on a value that is undefined or null.",
+  why:["The variable was never assigned a value.","An API/array lookup returned nothing (e.g. arr[5] doesn't exist).","You used the object before async data finished loading.","A typo in a variable or property name."],
+  fix:["Check the value exists before using it.","Use optional chaining: user?.name","Give a default: const name = user?.name ?? 'Guest'","console.log the variable just before the failing line to see what it really is."],
+  code:"// Before (crashes)\nconsole.log(user.name);\n\n// After (safe)\nconsole.log(user?.name ?? 'Guest');"},
+ {l:["JavaScript"],re:/(\w+) is not defined/i,title:"Variable is not defined",
+  what:"JavaScript found a name it has never heard of.",
+  why:["Typo in the variable name.","Variable declared inside another scope (function/block) and used outside it.","Forgot to import or declare it.","Script that defines it loads after the one using it."],
+  fix:["Check the spelling and capitalization.","Declare it with let/const before using it.","Import it: import { thing } from './file.js'","Make sure scripts load in the right order."],
+  code:"const total = 5;   // declare first\nconsole.log(total);"},
+ {l:["JavaScript"],re:/is not a function/i,title:"Calling something that isn't a function",
+  what:"You used () on a value that is not a function.",
+  why:["Wrong method name (typo or wrong object type, like .push on a string).","The variable was overwritten with another value.","Import is wrong (default vs named import).","Value is undefined because it hasn't loaded yet."],
+  fix:["console.log(typeof thing) to see what it is.","Check the method exists for that type (arrays, strings, objects differ).","Fix your import style."],
+  code:"console.log(typeof myFunc);  // should say 'function'"},
+ {l:["JavaScript"],re:/assignment to constant variable/i,title:"Reassigning a const",
+  what:"You tried to change a variable that was declared with const.",
+  why:["const variables can't be reassigned after creation."],
+  fix:["Use let if the value must change.","Or mutate the object/array (push, set property) instead of reassigning."],
+  code:"let count = 0;\ncount = count + 1;"},
+ {l:["JavaScript"],re:/maximum call stack size exceeded/i,title:"Infinite recursion",
+  what:"A function kept calling itself until the browser ran out of stack space.",
+  why:["Recursive function with no stopping condition (base case).","Two functions calling each other forever.","A setter calling itself."],
+  fix:["Add a base case that returns.","Make sure each call moves toward that base case."],
+  code:"function countdown(n){\n  if(n <= 0) return;   // base case\n  countdown(n - 1);\n}"},
+ {l:["JavaScript"],re:/unexpected token|unexpected end of (json )?input|in json at position/i,title:"Syntax or JSON parsing problem",
+  what:"The parser hit a character it didn't expect, or the input ended too early.",
+  why:["Missing or extra bracket, brace, comma or quote.","JSON.parse got HTML or an empty string instead of JSON (often a failed API call).","Trailing comma in JSON."],
+  fix:["Check the line number in the error and the line above it.","Use a code editor that highlights matching brackets.","For JSON: console.log the raw text before parsing and validate it."],
+  code:"const text = await res.text();\nconsole.log(text);        // is it really JSON?\nconst data = JSON.parse(text);"},
+ {l:["JavaScript"],re:/failed to fetch|cors|networkerror/i,title:"Network / CORS error",
+  what:"The browser blocked or couldn't complete a request to a server.",
+  why:["The server doesn't allow your origin (CORS).","Wrong URL or server is down.","Mixing http and https.","Opening the page as file:// instead of through a server."],
+  fix:["Check the URL in the browser directly.","Enable CORS on the server for your origin.","Run the page via a local server (e.g. VS Code Live Server).","Look at the Network tab in DevTools for the real status code."]},
+
+ // Python
+ {l:["Python"],re:/indentationerror/i,title:"Bad indentation",
+  what:"Python found spacing that doesn't match its block structure.",
+  why:["Mixed tabs and spaces.","Code under if/for/def isn't indented.","Inconsistent number of spaces."],
+  fix:["Use 4 spaces for every level.","Convert tabs to spaces in your editor.","Make sure the line after a colon is indented."],
+  code:"def greet():\n    print('hi')   # 4 spaces"},
+ {l:["Python"],re:/nameerror.*name '?(\w+)'? is not defined|nameerror/i,title:"Name is not defined",
+  what:"Python doesn't know a variable or function name you used.",
+  why:["Typo.","Used before it was assigned.","Forgot to import a module."],
+  fix:["Check spelling and case (Python is case-sensitive).","Assign the variable before using it.","Add the import at the top of the file."],
+  code:"import math\nprint(math.sqrt(16))"},
+ {l:["Python"],re:/modulenotfounderror|no module named/i,title:"Module not found",
+  what:"Python can't find the library you tried to import.",
+  why:["The package isn't installed.","Installed in a different Python/virtual environment.","Typo in the module name."],
+  fix:["Install it: pip install package-name","Check you're using the same interpreter that installed it.","Verify the exact module name."],
+  code:"pip install requests"},
+ {l:["Python"],re:/indexerror/i,title:"List index out of range",
+  what:"You asked for a position in a list that doesn't exist.",
+  why:["Index is bigger than len(list) - 1.","List is empty.","Off-by-one error in a loop."],
+  fix:["Print len(my_list) and the index.","Loop with for item in my_list.","Check the list isn't empty first."],
+  code:"if i < len(items):\n    print(items[i])"},
+ {l:["Python"],re:/keyerror/i,title:"Dictionary key missing",
+  what:"You looked up a key that isn't in the dictionary.",
+  why:["Typo or wrong case in the key.","Data doesn't contain that field."],
+  fix:["Use .get() with a default.","Check with: if key in my_dict","Print my_dict.keys() to see what's there."],
+  code:"value = my_dict.get('name', 'unknown')"},
+ {l:["Python"],re:/'nonetype' object|nonetype/i,title:"Using None like a real value",
+  what:"A value is None (nothing) but your code treated it like an object.",
+  why:["A function didn't return anything (missing return).","A search/lookup found nothing.","Methods like list.sort() return None."],
+  fix:["Check the function actually returns a value.","Test: if value is not None","Don't assign the result of in-place methods like x = x.sort()."]},
+ {l:["Python"],re:/typeerror.*(unsupported operand|can only concatenate|must be str)/i,title:"Mixing incompatible types",
+  what:"You combined values of different types, like a number and a string.",
+  why:["Adding str + int.","Input from input() is always a string."],
+  fix:["Convert types: int('5'), str(5).","Use f-strings: f'Age: {age}'"],
+  code:"age = int(input('Age: '))\nprint(f'Next year: {age + 1}')"},
+ {l:["Python"],re:/valueerror.*invalid literal/i,title:"Can't convert text to number",
+  what:"int() or float() received text that isn't a valid number.",
+  why:["Empty input or letters in the text.","Extra spaces or symbols."],
+  fix:["Validate with .isdigit() or use try/except.","Strip whitespace: text.strip()"],
+  code:"try:\n    n = int(text)\nexcept ValueError:\n    print('Enter a number')"},
+ {l:["Python"],re:/zerodivisionerror/i,title:"Division by zero",
+  what:"Your code divided a number by zero.",why:["Denominator is 0, often from empty data or user input."],
+  fix:["Check the divisor before dividing."],code:"if b != 0:\n    result = a / b"},
+
+ // Java
+ {l:["Java"],re:/nullpointerexception/i,title:"NullPointerException",
+  what:"You used an object reference that points to nothing (null).",
+  why:["Variable declared but never created with new.","A method returned null.","Array/collection element is null."],
+  fix:["Initialize the object before use.","Add a null check: if (obj != null)","Read the stack trace: the first line with your file name shows where."],
+  code:"String s = null;\nif (s != null) {\n    System.out.println(s.length());\n}"},
+ {l:["Java"],re:/arrayindexoutofbounds|indexoutofbounds/i,title:"Index out of bounds",
+  what:"You accessed an array/list position that doesn't exist.",
+  why:["Valid indexes are 0 to length-1.","Loop uses <= instead of <."],
+  fix:["Loop with i < array.length.","Print the index and length to compare."],
+  code:"for (int i = 0; i < arr.length; i++) { ... }"},
+ {l:["Java"],re:/cannot find symbol/i,title:"Cannot find symbol",
+  what:"The compiler doesn't recognize a variable, method or class name.",
+  why:["Typo or wrong capitalization.","Missing import.","Variable declared in a different scope."],
+  fix:["Check spelling and case.","Add the missing import.","Declare the variable before using it."]},
+ {l:["Java"],re:/incompatible types/i,title:"Incompatible types",
+  what:"You assigned a value to a variable of a different type.",
+  why:["Putting a double into an int, or a String into an int."],
+  fix:["Cast or convert: (int) x, Integer.parseInt(str)."],code:"int n = Integer.parseInt(\"42\");"},
+ {l:["Java"],re:/stackoverflowerror/i,title:"StackOverflowError",
+  what:"A method called itself too many times.",why:["Recursion with no base case."],
+  fix:["Add a stopping condition and make sure each call gets closer to it."]},
+
+ // C++
+ {l:["C++"],re:/segmentation fault|segfault/i,title:"Segmentation fault",
+  what:"Your program touched memory it isn't allowed to use, so the OS killed it.",
+  why:["Dereferencing a null or uninitialized pointer.","Array index out of range.","Using memory after it was freed.","Infinite recursion."],
+  fix:["Initialize pointers (nullptr) and check before use.","Check array bounds.","Compile with -g -fsanitize=address to find the exact line."],
+  code:"g++ -g -fsanitize=address main.cpp -o main"},
+ {l:["C++"],re:/undefined reference/i,title:"Linker error: undefined reference",
+  what:"The code compiled but the linker couldn't find a function's definition.",
+  why:["Function declared but never defined.","Forgot to compile/link another .cpp file or library.","main() missing."],
+  fix:["Make sure every declared function has a body.","Compile all files together: g++ a.cpp b.cpp","Add -l for libraries."]},
+ {l:["C++"],re:/was not declared in this scope/i,title:"Not declared in this scope",
+  what:"The compiler doesn't know that name at this point in the code.",
+  why:["Missing #include.","Typo.","Forgot std:: or using namespace std;"],
+  fix:["Add the right #include (e.g. <iostream>, <vector>).","Use std::cout, std::string, etc."]},
+ {l:["C++"],re:/expected ['‘]?;/i,title:"Missing semicolon",
+  what:"The compiler expected a ; to end a statement.",
+  why:["Forgot ; at the end of a line (often reported on the next line).","Missing ; after a struct/class definition."],
+  fix:["Check the line before the one reported."]},
+
+ // Any language
+ {l:null,re:/syntaxerror|syntax error/i,title:"Syntax error",
+  what:"The code breaks the grammar rules of the language, so it can't even start.",
+  why:["Missing bracket, quote, colon or semicolon.","Misspelled keyword."],
+  fix:["Look at the reported line and the line above it.","Check matching (), [], {} and quotes."]},
+ {l:null,re:/out of memory|heap/i,title:"Out of memory",
+  what:"The program used more memory than available.",
+  why:["Huge data loaded at once.","Memory leak or infinite loop adding items."],
+  fix:["Process data in smaller chunks.","Look for loops that never end."]},
+ {l:null,re:/permission denied|eacces/i,title:"Permission denied",
+  what:"The program isn't allowed to access a file, port or folder.",
+  why:["Wrong file permissions.","File is open elsewhere."],
+  fix:["Check file permissions.","Run from a folder you own."]},
+ {l:null,re:/no such file|enoent|filenotfound/i,title:"File not found",
+  what:"The program looked for a file that isn't at that path.",
+  why:["Wrong path or filename.","Running from a different working directory."],
+  fix:["Print the current directory and compare the path.","Use the correct relative or absolute path."]}
+];
+
+const EXAMPLES=[
+ ["JavaScript","TypeError: Cannot read properties of undefined (reading 'name')"],
+ ["Python","IndexError: list index out of range"],
+ ["Java","Exception in thread \"main\" java.lang.NullPointerException"],
+ ["C++","Segmentation fault (core dumped)"]
+];
+
+// ---------- Logic ----------
+const $=id=>document.getElementById(id);
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+
+function analyze(error,lang){
+  // language-specific first, then generic
+  let m=RULES.find(r=>r.l&&r.l.includes(lang)&&r.re.test(error));
+  if(!m) m=RULES.find(r=>!r.l&&r.re.test(error));
+  if(!m){ // try any language (user may have picked wrong one)
+    const other=RULES.find(r=>r.l&&r.re.test(error));
+    if(other) return {rule:other,note:`This looks like a ${other.l[0]} error, but you selected ${lang}.`};
+  }
+  return {rule:m||null};
+}
+
+function card(title,body,cls){
+  const c=el("div","card "+(cls||""));c.appendChild(el("h2","",title));
+  if(typeof body==="string")c.appendChild(el("p","",body));
+  else if(Array.isArray(body)){const ol=el("ol");body.forEach(i=>ol.appendChild(el("li","",i)));c.appendChild(ol);}
+  return c;
+}
+
+function render(){
+  const error=$("err").value.trim(),lang=$("lang").value,out=$("out");
+  out.replaceChildren();
+  if(!error){out.appendChild(card("Nothing to explain yet","Paste an error message above, then press Explain this error."));return;}
+  const {rule,note}=analyze(error,lang);
+  out.appendChild(el("span","tag",lang));
+  if(note)out.appendChild(el("p","hint",note));
+  if(rule){
+    out.appendChild(card("What happened? — "+rule.title,rule.what));
+    out.appendChild(card("Why might it happen?",rule.why));
+    const fix=card("How can I fix it?",rule.fix,"fix");
+    if(rule.code)fix.appendChild(el("pre","",rule.code));
+    out.appendChild(fix);
+  }else{
+    out.appendChild(card("What happened?","DevFix doesn't have a specific match for this error, but here is how to work it out."));
+    out.appendChild(card("Why might it happen?",["Typo or wrong name somewhere near the reported line.","A value is missing or has a different type than expected.","A library or setup step is missing."]));
+    out.appendChild(card("How can I fix it?",["Find the file name and line number in the error and go there.","Read the first line of the message; it names the problem type.","Print or log the variables on that line.","Search the exact error text together with the language name.","Use the button below to get an AI to explain it."],"fix"));
+  }
+  const b=el("button","ghost","Copy a prompt for an AI assistant");
+  b.onclick=()=>{
+    const p=`I'm using ${lang} and got this error:\n\n${error}\n\nExplain what happened, why it might happen, and how to fix it, in simple words with a short code example.`;
+    navigator.clipboard.writeText(p).then(()=>b.textContent="Copied!");
+  };
+  out.appendChild(b);
+}
+
+$("go").onclick=render;
+$("clear").onclick=()=>{$("err").value="";$("out").replaceChildren();};
+$("err").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))render();});
+EXAMPLES.forEach(([l,t])=>{
+  const b=el("button","ghost",l);
+  b.onclick=()=>{$("lang").value=l;$("err").value=t;render();};
+  $("ex").appendChild(b);
+});
+</script>
+</body>
+</html>
