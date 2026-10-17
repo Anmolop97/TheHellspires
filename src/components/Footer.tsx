@@ -18,11 +18,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Left Branding */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-500/20 shadow-[0_0_16px_rgba(45,212,191,0.2)] bg-[#050b11] flex items-center justify-center p-0.5">
+          <div className="w-8 h-8 flex items-center justify-center">
             <img 
               src="/coditech-icon.png" 
               alt="Coditech Logo" 
-              className="w-full h-full object-contain" 
+              className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(0,245,212,0.4)]" 
             />
           </div>
           <div>

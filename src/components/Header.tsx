@@ -23,15 +23,15 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="flex items-center justify-between py-6 px-4 sm:px-8 border-b border-white/[0.06] backdrop-blur-md sticky top-0 z-40 bg-[#060911]/80">
       <div className="flex items-center gap-3">
         <motion.div 
-          whileHover={{ scale: 1.06 }}
+          whileHover={{ scale: 1.1, rotate: 3 }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="relative w-10 h-10 rounded-xl overflow-hidden border border-cyan-500/30 shadow-[0_0_20px_rgba(45,212,191,0.25)] bg-[#050b11] flex items-center justify-center p-0.5"
+          className="relative w-10 h-10 flex items-center justify-center cursor-pointer select-none"
         >
           <img 
             src="/coditech-icon.png" 
             alt="Coditech Logo" 
-            className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(45,212,191,0.35)]" 
+            className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(0,245,212,0.45)]" 
           />
         </motion.div>
         <div>

@@ -26,15 +26,15 @@ export const ActivityRail: React.FC<ActivityRailProps> = ({
       {/* Top Brand Logo */}
       <div className="flex flex-col items-center gap-4">
         <motion.div
-          whileHover={{ scale: 1.08 }}
+          whileHover={{ scale: 1.12, rotate: 4 }}
           whileTap={{ scale: 0.94 }}
-          className="w-9 h-9 rounded-xl overflow-hidden border border-cyan-500/30 shadow-[0_0_16px_rgba(45,212,191,0.25)] bg-[#050b11] flex items-center justify-center p-0.5 cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center cursor-pointer select-none"
           title="Coditech Studio"
         >
           <img 
             src="/coditech-icon.png" 
             alt="Coditech Logo" 
-            className="w-full h-full object-contain drop-shadow-[0_0_6px_rgba(45,212,191,0.35)]" 
+            className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(0,245,212,0.45)]" 
           />
         </motion.div>
 
