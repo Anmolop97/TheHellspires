@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Terminal, Shield, Heart, Cpu } from 'lucide-react';
+import { Shield, Heart, Cpu } from 'lucide-react';
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className = "w-3.5 h-3.5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -18,8 +18,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Left Branding */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-[#060911] font-black text-sm shadow-[0_0_16px_rgba(94,234,212,0.2)]">
-            <Terminal className="w-4 h-4 stroke-[2.5]" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-500/20 shadow-[0_0_16px_rgba(45,212,191,0.2)] bg-[#050b11] flex items-center justify-center p-0.5">
+            <img 
+              src="/coditech-icon.png" 
+              alt="Coditech Logo" 
+              className="w-full h-full object-contain" 
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5 font-bold tracking-tight text-sm text-slate-200">

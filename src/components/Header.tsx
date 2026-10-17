@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Terminal, Settings, History } from 'lucide-react';
+import { Settings, History } from 'lucide-react';
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className = "w-3.5 h-3.5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -23,12 +23,16 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="flex items-center justify-between py-6 px-4 sm:px-8 border-b border-white/[0.06] backdrop-blur-md sticky top-0 z-40 bg-[#060911]/80">
       <div className="flex items-center gap-3">
         <motion.div 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-[#060911] shadow-[0_0_24px_rgba(94,234,212,0.25)] font-black text-xl"
+          className="relative w-10 h-10 rounded-xl overflow-hidden border border-cyan-500/30 shadow-[0_0_20px_rgba(45,212,191,0.25)] bg-[#050b11] flex items-center justify-center p-0.5"
         >
-          <Terminal className="w-5 h-5 stroke-[2.5]" />
+          <img 
+            src="/coditech-icon.png" 
+            alt="Coditech Logo" 
+            className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(45,212,191,0.35)]" 
+          />
         </motion.div>
         <div>
           <div className="flex items-center gap-1.5 font-bold tracking-tight text-lg text-slate-100">
