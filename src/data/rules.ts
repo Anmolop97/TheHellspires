@@ -197,6 +197,102 @@ export function inspectRawCode(code: string, selectedLang: string): DiagnosticRu
   const targetLangLower = (selectedLang || "").toLowerCase();
   const isPython = targetLangLower === "python" || (!targetLangLower && (clean.includes("def ") || clean.includes("print(")));
 
+  // 0. Include / Header / Import Syntax Check
+  if (clean.includes("#include")) {
+    const isCSharp = targetLangLower === "c#" || targetLangLower === "csharp";
+    const hasStudioTypo = clean.includes("studio.h");
+
+    if (hasStudioTypo) {
+      if (isCSharp) {
+        return {
+          category: "C#",
+          langs: ["C#"],
+          re: /(?:)/,
+          title: "C# CS1024: Invalid Directive '#include <studio.h>'",
+          what: "C# does not support C/C++ '#include' directives. Additionally, '<studio.h>' is a classic typo for '<stdio.h>'. In C#, standard I/O is provided by the 'System' namespace using the 'using' directive.",
+          why: [
+            "Attempted to use C/C++ preprocessor syntax in a C# source file.",
+            "'<studio.h>' is a misspelling of the standard C library '<stdio.h>'.",
+            "In C#, console and stream operations belong to 'using System;' or 'using System.IO;'."
+          ],
+          fix: [
+            "Replace '#include <studio.h>' with 'using System;' at the top of the file.",
+            "If you meant to write C or C++, switch the language dropdown to 'C' or 'C++' and use '#include <stdio.h>'."
+          ],
+          code: `// C# uses the 'using' directive, not '#include'\nusing System;\n\nclass Program {\n    static void Main(string[] args) {\n        Console.WriteLine("C# standard I/O working!");\n    }\n}`
+        };
+      } else {
+        return {
+          category: "C / C++",
+          langs: ["C", "C++"],
+          re: /(?:)/,
+          title: "C/C++ Fatal Error: studio.h: No Such File or Directory",
+          what: "Header file '<studio.h>' does not exist. This is a common typographical mistake for '<stdio.h>' (Standard Input/Output).",
+          why: [
+            "Typo in header name: typed 'studio.h' with an extra 'u' instead of 'stdio.h'.",
+            "The compiler cannot locate 'studio.h' in the include search paths and halts compilation."
+          ],
+          fix: [
+            "Change '#include <studio.h>' to '#include <stdio.h>'."
+          ],
+          code: `#include <stdio.h>\n\nint main(void) {\n    printf("Standard I/O working properly!\\n");\n    return 0;\n}`
+        };
+      }
+    }
+
+    if (isCSharp) {
+      return {
+        category: "C#",
+        langs: ["C#"],
+        re: /(?:)/,
+        title: "C# CS1024: Preprocessor Directive '#include' Not Found",
+        what: "'#include' is a C/C++ preprocessor directive that does not exist in C#. In C#, libraries and namespaces are referenced with the 'using' keyword.",
+        why: [
+          "Imported C/C++ header syntax into a C# source file.",
+          "C# assemblies and BCL namespaces require 'using Namespace;'."
+        ],
+        fix: [
+          "Replace '#include' statements with 'using System;' or 'using System.IO;'."
+        ],
+        code: `using System;\nusing System.Collections.Generic;\nusing System.IO;`
+      };
+    }
+
+    if (targetLangLower === "python") {
+      return {
+        category: "Python",
+        langs: ["Python"],
+        re: /(?:)/,
+        title: "Python SyntaxError: '#include' is Not a Python Keyword",
+        what: "Python uses 'import module_name' instead of C-style '#include'.",
+        why: [
+          "Using C/C++ preprocessor syntax in a Python script."
+        ],
+        fix: [
+          "Use 'import sys' or 'import os' to import standard libraries."
+        ],
+        code: `import sys\nimport os\n\nprint("Python standard library working!")`
+      };
+    }
+
+    if (targetLangLower === "java") {
+      return {
+        category: "Java",
+        langs: ["Java"],
+        re: /(?:)/,
+        title: "Java SyntaxError: '#include' is Invalid in Java",
+        what: "Java uses the 'import package.Class;' statement to import libraries, not '#include'.",
+        why: [
+          "Using C/C++ preprocessor syntax in Java."
+        ],
+        fix: [
+          "Replace '#include' with 'import java.util.*;' or 'import java.io.*;'."
+        ],
+        code: `import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Java working!");\n    }\n}`
+      };
+    }
+  }
+
   // 1. Bracket / Parenthesis balance check
   const openParen = (clean.match(/\(/g) || []).length;
   const closeParen = (clean.match(/\)/g) || []).length;
@@ -362,12 +458,163 @@ export function inspectRawCode(code: string, selectedLang: string): DiagnosticRu
   return null;
 }
 
+function getLanguageDefensiveCode(lang: string, identifier: string | null): string {
+  const l = (lang || '').toLowerCase();
+  const id = identifier || 'data';
+
+  if (l.includes('c#') || l.includes('csharp')) {
+    return `// C# Null Guard & Defensive Handling\nif (${id} != null) {\n    Console.WriteLine(${id}.ToString());\n} else {\n    Console.WriteLine("[Guard] ${id} was null");\n}`;
+  }
+  if (l === 'c') {
+    return `// C Memory & Pointer Check\nif (${id} != NULL) {\n    printf("Valid reference\\n");\n} else {\n    fprintf(stderr, "[Error] Null pointer dereference\\n");\n}`;
+  }
+  if (l.includes('c++') || l.includes('cpp')) {
+    return `// C++ Nullptr Guard\nif (${id} != nullptr) {\n    std::cout << "Valid reference" << std::endl;\n} else {\n    std::cerr << "[Error] nullptr access" << std::endl;\n}`;
+  }
+  if (l.includes('python')) {
+    return `# Python Guard Clause\nif ${id} is not None:\n    print(f"Value: {${id}}")\nelse:\n    print("[Guard] ${id} was None")`;
+  }
+  if (l.includes('java')) {
+    return `// Java Null Guard\nif (${id} != null) {\n    System.out.println(${id}.toString());\n} else {\n    System.err.println("[Guard] ${id} was null");\n}`;
+  }
+  if (l.includes('go')) {
+    return `// Go Nil Check\nif ${id} != nil {\n    fmt.Println(${id})\n} else {\n    log.Println("[Guard] ${id} is nil")\n}`;
+  }
+  if (l.includes('rust')) {
+    return `// Rust Option Matching\nif let Some(val) = ${id} {\n    println!("Value: {:?}", val);\n} else {\n    eprintln!("[Guard] ${id} was None");\n}`;
+  }
+  return `// Safe Navigation & Guard\nconst safeVal = ${id}?.property ?? 'default';\nif (!${id}) {\n  console.warn('[Guard] ${id} was undefined or null');\n}`;
+}
+
+/**
+ * Dynamic Intelligent Synthesizer:
+ * Analyzes uncataloged errors, stack traces, and snippets dynamically.
+ * Extracts error class, failed property/variable, origin file/line, and constructs actionable diagnosis.
+ */
+export function synthesizeDynamicRule(input: string, selectedLang: string): DiagnosticRule {
+  const clean = input.trim();
+  const firstLine = clean.split('\n')[0].trim();
+  const lang = selectedLang || 'General';
+
+  // 1. Detect error name & message
+  const errorMatch = clean.match(/([a-zA-Z0-9_.]*(?:Error|Exception|Panic|Fault|Violation|Failure|Warning))(?::|\s+-|\s+failed)?\s*(.*)/i);
+  const errorType = errorMatch ? errorMatch[1].trim() : 'Runtime Exception';
+  const errorMessage = errorMatch && errorMatch[2] ? errorMatch[2].trim() : firstLine;
+
+  // 2. Detect property / identifier if any
+  const identifierMatch = clean.match(/(?:reading|property|variable|identifier|symbol|field|module|import)\s+['"`]([a-zA-Z0-9_$]+)['"`]/i)
+    || clean.match(/['"`]([a-zA-Z0-9_$]+)['"`]\s+(?:is not defined|was not found|cannot be accessed|is null)/i);
+  const identifier = identifierMatch ? identifierMatch[1] : null;
+
+  // 3. Detect file & line location
+  const locationMatch = clean.match(/(?:at\s+|File\s+["']?|in\s+)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?::|,\s*line\s*)(\d+)/i);
+  const location = locationMatch ? `${locationMatch[1]} (line ${locationMatch[2]})` : null;
+
+  // 4. Tailor explanation
+  let what = `The runtime encountered a '${errorType}' during execution.`;
+  if (errorMessage && errorMessage !== errorType) {
+    what += ` ${errorMessage.length > 120 ? errorMessage.slice(0, 120) + '...' : errorMessage}.`;
+  }
+  if (location) {
+    what += ` Originates at: ${location}.`;
+  }
+
+  const why: string[] = [];
+  const fix: string[] = [];
+  let codeSnippet = '';
+
+  if (/null|undefined|nil|none/i.test(clean)) {
+    why.push(
+      identifier ? `The object or pointer holding '${identifier}' is null/undefined at runtime.` : 'A variable reference evaluated to null or undefined prior to member property access.',
+      'Asynchronous data or API response has not completed resolving before rendering.',
+      'Upstream data payload was empty, malformed, or missing the expected key.'
+    );
+    fix.push(
+      identifier ? `Use optional chaining: 'object?.${identifier}' to guard against missing properties.` : 'Add optional chaining (?.) on nested object chains.',
+      'Verify that upstream promises/async calls are properly awaited before access.',
+      'Provide a fallback default value or assert state truthiness before processing.'
+    );
+    codeSnippet = identifier 
+      ? `// 1. Safe access with optional chaining\nconst safeValue = data?.${identifier} ?? 'default';\n\n// 2. Defensive assertion guard\nif (!data || !data.${identifier}) {\n  console.warn('[Guard] Missing ${identifier}');\n  return;\n}`
+      : `// Add defensive null check before execution\nif (targetObject == null) {\n  return;\n}\nconst result = targetObject?.property;`;
+  } else if (/syntax|unexpected|parse/i.test(errorType) || /syntax/i.test(clean)) {
+    why.push(
+      'A token or character violates language grammar rules.',
+      'Unclosed bracket, parenthesis, or quotation mark within the file.',
+      'Language feature is not supported by the current compiler or execution target.'
+    );
+    fix.push(
+      'Inspect the line indicated by the stack trace for unclosed delimiters.',
+      'Check bracket balance throughout the affected scope.',
+      'Ensure compiler / transpiler target aligns with the syntax features used.'
+    );
+    codeSnippet = `// Ensure all blocks and parentheses are properly terminated\ntry {\n  executeStatement();\n} catch (err) {\n  console.error('Syntax/Parse failure handled:', err);\n}`;
+  } else if (/reference|not defined|unresolved|symbol/i.test(errorType) || /not defined/i.test(clean)) {
+    why.push(
+      identifier ? `'${identifier}' was referenced before declaration or is outside the current scope.` : 'Identifier was called before declaration or import.',
+      'Missing import statement from another module.',
+      'Typo in variable or function naming.'
+    );
+    fix.push(
+      identifier ? `Ensure '${identifier}' is declared and imported in this module.` : 'Verify variable spelling and module scope visibility.',
+      'Check that the export exists in the target dependency.',
+      'Initialize variable with a default value before referencing.'
+    );
+    codeSnippet = identifier
+      ? `// Ensure variable is imported or declared\nimport { ${identifier} } from './module';\n\n// Or declare in scope\nconst ${identifier} = initialValue;`
+      : `// Ensure variable is initialized before calling\nconst myVar = initialValue;\nconsole.log(myVar);`;
+  } else if (/cors|network|fetch|http|404|500/i.test(clean)) {
+    why.push(
+      'Cross-Origin Resource Sharing (CORS) headers missing on destination server.',
+      'Endpoint URL is unreachable, offline, or returned a server error status code.',
+      'Network request timed out or was blocked by browser security policy.'
+    );
+    fix.push(
+      'Configure "Access-Control-Allow-Origin: *" on your backend server.',
+      'Use a local development proxy (e.g. Vite proxy) to bypass CORS restrictions.',
+      'Verify target URL, HTTP method, and network connectivity.'
+    );
+    codeSnippet = `// Backend (Express.js example)\napp.use((req, res, next) => {\n  res.header("Access-Control-Allow-Origin", "*");\n  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");\n  next();\n});`;
+  } else {
+    why.push(
+      `Runtime or compilation invariant violation in ${lang}.`,
+      'Input arguments do not conform to expected parameter types or compiler directives.',
+      'Unhandled boundary condition or invalid statement.'
+    );
+    fix.push(
+      `Verify syntax rules and library imports specific to ${lang}.`,
+      'Wrap high-risk operations in defensive assertion guards.',
+      'Check compiler / runtime error logs for precise stack trace origin.'
+    );
+    codeSnippet = getLanguageDefensiveCode(lang, identifier);
+  }
+
+  const generatedTitle = errorMatch 
+    ? `${errorType}: ${errorMessage.slice(0, 50)}`
+    : (firstLine.startsWith('#') || firstLine.startsWith('import') || firstLine.startsWith('using'))
+      ? `${lang} Directive / Import Error: ${firstLine.slice(0, 45)}`
+      : `Error: ${firstLine.slice(0, 50)}`;
+
+  return {
+    category: lang,
+    langs: [lang],
+    re: /(?:)/,
+    title: generatedTitle,
+    what,
+    why,
+    fix,
+    code: codeSnippet
+  };
+}
+
 /**
  * High-performance analyzer:
  * 0. Static Raw Code Syntax Inspector (catches unclosed brackets, colons, quotes)
  * 1. Checks fast CORE_RULES (< 0.05ms)
  * 2. Checks language bucket (< 0.1ms)
  * 3. Falls back to universal rules
+ * 4. Global pre-compiled scan
+ * 5. Dynamic Intelligent Synthesizer (never leaves the user hanging with null)
  */
 export function analyzeError(errorText: string, selectedLang: string): DiagnosticRule | null {
   const clean = errorText.trim();
@@ -403,5 +650,10 @@ export function analyzeError(errorText: string, selectedLang: string): Diagnosti
   if (universalMatch) return universalMatch;
 
   // Tier 4: Global scan
-  return RULES.find((r) => r.re.test(clean)) || null;
+  const globalMatch = RULES.find((r) => r.re.test(clean));
+  if (globalMatch) return globalMatch;
+
+  // Tier 5: Dynamic Intelligent Synthesizer for any custom/uncataloged error
+  return synthesizeDynamicRule(clean, selectedLang);
 }
+

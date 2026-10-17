@@ -26,12 +26,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
             />
           </div>
           <div>
-            <div className="flex items-center gap-1.5 font-bold tracking-tight text-sm text-slate-200">
-              <span>coditech</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_6px_rgba(94,234,212,0.8)]"></span>
+            <div className="flex items-center gap-2 font-black tracking-[0.14em] uppercase text-sm text-white font-['Space_Grotesk',sans-serif]">
+              <span>CODI</span><span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(45,212,191,0.3)]">TECH</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 tracking-widest uppercase">v2.4</span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono">
-              Deterministic error diagnostics & offline knowledge engine
+            <p className="text-[11px] text-slate-400 font-mono tracking-wider uppercase text-[10px] mt-0.5">
+              Offline-first code intelligence & diagnostic engine
             </p>
           </div>
         </div>

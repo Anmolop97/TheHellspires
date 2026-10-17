@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Sparkles, RotateCcw, CheckCircle, ChevronDown } from 'lucide-react';
+import { Zap, Sparkles, RotateCcw, CheckCircle, ChevronDown, ArrowRight } from 'lucide-react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { DiagnosticCard } from './components/DiagnosticCard';
 import { NovaAvatar } from './components/NovaAvatar';
+import { BackgroundAnimation } from './components/BackgroundAnimation';
 import { HistorySidebar } from './components/HistorySidebar';
 import type { HistoryItem } from './components/HistorySidebar';
 import { SettingsModal } from './components/SettingsModal';
@@ -19,6 +22,7 @@ const STORAGE_KEY_API_KEY = 'coditech_v2_api_key';
 export function App() {
   const [errorInput, setErrorInput] = useState('');
   const [selectedLang, setSelectedLang] = useState('JavaScript');
+  const [diagMode, setDiagMode] = useState<'instant' | 'ai'>('instant');
   const [activeRule, setActiveRule] = useState<DiagnosticRule | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +44,27 @@ export function App() {
     } catch (e) {
       console.error('Failed to load local storage', e);
     }
+  }, []);
+
+  // Initialize Lenis smooth scroll
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -88,8 +113,6 @@ export function App() {
           'quick'
         );
         showToast('Diagnosis ready');
-      } else {
-        showToast('No exact local rule match. Try Ask AI!');
       }
     }, 200);
   };
@@ -104,23 +127,24 @@ export function App() {
     setIsLoading(true);
 
     try {
+      const match = analyzeError(errorInput, selectedLang);
+      setActiveRule(match);
+
       if (!apiKey) {
-        // Fallback demonstration mode if no API key is provided
+        // High-intelligence local diagnosis without duplicate card spam
         setTimeout(() => {
           setIsLoading(false);
-          const simulatedAI = `Coditech AI Analysis for ${selectedLang}:\n\n` +
-            `Root Cause Analysis:\nThe error reported stems from an unhandled boundary condition in the execution flow. ` +
-            `When '${selectedLang}' processes this statement, the memory reference or object prototype fails to resolve.\n\n` +
-            `Recommended Refactoring:\n` +
-            `1. Introduce runtime assertion checks before the failure point.\n` +
-            `2. Check that upstream payloads adhere to the expected schema.\n` +
-            `3. For production grade resilience, attach error boundaries or recovery hooks.\n\n` +
-            `💡 Tip: Provide your Gemini API Key in Settings (⚙) to enable live multi-turn reasoning!`;
-          
-          setAiResponse(simulatedAI);
-          saveToHistory(errorInput, selectedLang, simulatedAI, 'ai');
-          showToast('AI analysis complete');
-        }, 800);
+          setAiResponse(null);
+          if (match) {
+            saveToHistory(
+              errorInput,
+              selectedLang,
+              `${match.title}\n\n${match.what}\n\nFix:\n${match.fix.join('\n')}`,
+              'ai'
+            );
+          }
+          showToast('Diagnosis complete');
+        }, 250);
         return;
       }
 
@@ -153,6 +177,15 @@ export function App() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
+      handleDiagnose();
+    }
+  };
+
+  // Unified trigger based on selected mode
+  const handleDiagnose = () => {
+    if (diagMode === 'ai') {
+      handleAskAI();
+    } else {
       handleQuickFix();
     }
   };
@@ -182,126 +215,139 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060911] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
-      {/* Navigation */}
-      <Header
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onToggleHistory={() => setIsHistoryOpen(true)}
-        historyCount={history.length}
-      />
+    <div className="min-h-screen bg-[#060911] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300 relative overflow-x-hidden">
+      {/* Living Ambient Cyber Aurora & Micro-Dot Grid */}
+      <BackgroundAnimation />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
-        <Hero />
+      {/* Main Content Layers */}
+      <div className="relative z-10 flex flex-col flex-1">
+        {/* Navigation */}
+        <Header
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onToggleHistory={() => setIsHistoryOpen(true)}
+          historyCount={history.length}
+        />
 
-        {/* Main Workspace Container */}
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+          <Hero />
+
+        {/* Modern AI Studio Workspace Container */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Input & Controls Panel */}
-          <section className="lg:col-span-7 space-y-6">
-            <div className="tactile-card rounded-2xl p-6 border border-white/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                    STEP 01
-                  </span>
-                  <h2 className="text-sm font-bold text-white tracking-tight">Describe the Problem</h2>
-                </div>
-                <div className="relative">
-                  <select
-                    value={selectedLang}
-                    onChange={(e) => setSelectedLang(e.target.value)}
-                    className="appearance-none bg-slate-900 border border-white/[0.1] rounded-lg px-3 py-1.5 pr-8 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500/50 cursor-pointer"
-                  >
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <option key={lang} value={lang} className="bg-slate-900 text-slate-200">
-                        {lang}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
+          {/* Modern Input & Controls Panel */}
+          <section className="lg:col-span-7 space-y-4">
+            <div className="relative rounded-3xl p-6 sm:p-7 border border-white/[0.08] bg-[#0c121e]/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all">
+              {/* Subtle ambient bloom behind card */}
+              <div className="absolute -top-10 -left-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              {/* Textarea Code/Error input */}
-              <div className="relative rounded-xl overflow-hidden border border-white/[0.08] bg-[#070b13] focus-within:border-emerald-500/40 transition-colors">
+              {/* Clean spacious modern input */}
+              <div className="relative min-h-[170px]">
                 <textarea
                   value={errorInput}
                   onChange={(e) => setErrorInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Paste error message, stack trace, or buggy snippet...\n\nExample:\nTypeError: Cannot read properties of undefined (reading 'name')`}
-                  rows={8}
-                  className="w-full p-4 bg-transparent text-xs sm:text-sm font-mono text-slate-200 placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
+                  placeholder="Paste your error, stack trace, or code snippet..."
+                  rows={7}
+                  className="w-full bg-transparent text-sm sm:text-base font-mono text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed selection:bg-emerald-500/25 selection:text-emerald-200"
                 />
-                <div className="flex items-center justify-between px-3 py-2 border-t border-white/[0.04] bg-slate-950/40 text-[11px] text-slate-500 font-mono">
-                  <span>Press <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-slate-300">Ctrl + Enter</kbd> to diagnose</span>
-                  <span>{errorInput.length} chars</span>
-                </div>
               </div>
 
-              {/* Action Buttons with Emil Kowalski spring scale */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-white/[0.06]">
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
-                    onClick={handleQuickFix}
-                    disabled={isLoading}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs transition-colors shadow-[0_0_20px_rgba(94,234,212,0.25)]"
-                  >
-                    <Zap className="w-4 h-4 fill-slate-950" />
-                    <span>Quick Fix</span>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
-                    onClick={handleAskAI}
-                    disabled={isLoading}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/30 text-xs font-semibold transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <span>Ask AI</span>
-                  </motion.button>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setErrorInput('');
-                    setActiveRule(null);
-                    setAiResponse(null);
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-2 py-1"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Clear</span>
-                </button>
-              </div>
-
-              {/* Pre-canned Example Chips */}
-              <div className="mt-5 pt-4 border-t border-white/[0.06]">
-                <span className="text-[11px] text-slate-400 font-mono block mb-2 font-medium">
-                  Try an example pattern:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {EXAMPLE_CHIPS.map((chip, idx) => (
-                    <motion.button
-                      key={idx}
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                      onClick={() => handleSelectExample(chip.lang, chip.error)}
-                      className="px-2.5 py-1 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/[0.08] hover:border-emerald-500/40 text-[11px] text-slate-300 hover:text-emerald-300 transition-colors"
+              {/* Floating integrated bottom action bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/[0.06]">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Language Selector Pill */}
+                  <div className="relative">
+                    <select
+                      value={selectedLang}
+                      onChange={(e) => setSelectedLang(e.target.value)}
+                      className="appearance-none bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.1] rounded-full pl-3.5 pr-8 py-2 text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-500/50 cursor-pointer transition-colors"
                     >
-                      {chip.label}
-                    </motion.button>
-                  ))}
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <option key={lang} value={lang} className="bg-slate-900 text-slate-200">
+                          {lang}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* Mode Switcher Pill */}
+                  <div className="flex items-center bg-white/[0.04] p-1 rounded-full border border-white/[0.1]">
+                    <button
+                      type="button"
+                      onClick={() => setDiagMode('instant')}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        diagMode === 'instant'
+                          ? 'bg-emerald-500/20 text-emerald-300 shadow-sm border border-emerald-500/30'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Instant</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiagMode('ai')}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        diagMode === 'ai'
+                          ? 'bg-cyan-500/20 text-cyan-300 shadow-sm border border-cyan-500/30'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Deep AI</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Primary Action Button & Clear */}
+                <div className="flex items-center gap-2.5">
+                  {errorInput && (
+                    <button
+                      onClick={() => {
+                        setErrorInput('');
+                        setActiveRule(null);
+                        setAiResponse(null);
+                      }}
+                      className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Clear</span>
+                    </button>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                    onClick={handleDiagnose}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:opacity-95 text-slate-950 font-bold text-xs tracking-tight transition-all shadow-[0_0_24px_rgba(52,211,153,0.35)] hover:shadow-[0_0_32px_rgba(52,211,153,0.5)] disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>{isLoading ? 'Diagnosing...' : 'Diagnose Error'}</span>
+                    <ArrowRight className="w-4 h-4 text-slate-950" />
+                  </motion.button>
                 </div>
               </div>
             </div>
+
+            {/* Quick Scenario Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-1 px-1">
+              {EXAMPLE_CHIPS.slice(0, 5).map((chip, idx) => (
+                <motion.button
+                  key={idx}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  onClick={() => handleSelectExample(chip.lang, chip.error)}
+                  className="px-3.5 py-1.5 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-emerald-500/30 text-xs text-slate-300 hover:text-emerald-300 transition-all font-medium cursor-pointer"
+                >
+                  {chip.label}
+                </motion.button>
+              ))}
+            </div>
           </section>
 
-          {/* Diagnostic Result Column */}
+          {/* Diagnostic Result / Companion Column */}
           <section className="lg:col-span-5">
             <DiagnosticCard
               rule={activeRule}
@@ -311,34 +357,52 @@ export function App() {
 
             {!activeRule && !aiResponse && !isLoading && (
               <motion.div 
-                initial={{ opacity: 0, scale: 0.96 }}
+                initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", stiffness: 450, damping: 30 }}
-                className="tactile-card rounded-2xl p-8 border border-white/[0.08] text-center flex flex-col items-center relative overflow-hidden"
+                className="relative rounded-3xl p-8 border border-white/[0.08] bg-[#0c121e]/80 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-center flex flex-col items-center overflow-hidden"
               >
-                <div className="relative mb-2">
-                  <NovaAvatar animation="idle" size={150} />
-                  <span className="absolute bottom-1 right-2 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-4 ring-[#0c121e]"></span>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-gradient-to-tr from-cyan-500/20 via-emerald-500/15 to-transparent blur-3xl rounded-full pointer-events-none" />
+
+                <div className="relative mb-3 z-10">
+                  <NovaAvatar animation="idle" size={140} />
                 </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-mono mb-2">
+
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3 z-10">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                   </span>
-                  <span>Nova AI Assistant Ready</span>
+                  <span>Model Ready</span>
                 </div>
-                <h3 className="text-base font-bold text-white tracking-tight">Meet Nova, Your AI Debugger</h3>
-                <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
-                  Paste an error message or broken code on the left, and Nova will analyze AST context, trace root causes, and write the fix.
-                </p>
+
+                <h3 className="text-xl font-bold text-white tracking-tight mb-4 z-10">
+                  Instant AI Code Diagnostics
+                </h3>
+
+                <div className="space-y-2.5 text-left w-full max-w-xs mx-auto z-10">
+                  <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    <span>Root cause isolation</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
+                    <span>One-click verified fix</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                    <span>Multi-language AST support</span>
+                  </div>
+                </div>
               </motion.div>
             )}
           </section>
         </div>
       </main>
 
-      {/* Footer with Creator Credits & Links */}
-      <Footer onOpenPrivacy={() => setIsPrivacyOpen(true)} />
+        {/* Footer with Creator Credits & Links */}
+        <Footer onOpenPrivacy={() => setIsPrivacyOpen(true)} />
+      </div>
 
       {/* Slide-over History Drawer */}
       <HistorySidebar

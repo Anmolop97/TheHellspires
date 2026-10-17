@@ -20,38 +20,44 @@ export const Header: React.FC<HeaderProps> = ({
   historyCount
 }) => {
   return (
-    <header className="flex items-center justify-between py-6 px-4 sm:px-8 border-b border-white/[0.06] backdrop-blur-md sticky top-0 z-40 bg-[#060911]/80">
-      <div className="flex items-center gap-3">
-        <motion.div 
-          whileHover={{ scale: 1.1, rotate: 3 }}
-          whileTap={{ scale: 0.94 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="relative w-10 h-10 flex items-center justify-center cursor-pointer select-none"
-        >
-          <img 
-            src="/coditech-icon.png" 
-            alt="Coditech Logo" 
-            className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(0,245,212,0.45)]" 
-          />
-        </motion.div>
-        <div>
-          <div className="flex items-center gap-1.5 font-bold tracking-tight text-lg text-slate-100">
-            <span>coditech</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(94,234,212,0.8)]"></span>
-          </div>
-          <p className="text-[11px] text-slate-400 font-mono tracking-wide hidden sm:block">
-            deterministic error diagnostics
-          </p>
+    <header className="flex items-center justify-between py-5 px-4 sm:px-8 sticky top-0 z-40 bg-gradient-to-b from-[#060911]/95 via-[#060911]/60 to-transparent backdrop-blur-md transition-all">
+      <div className="flex items-center gap-3.5">
+        {/* Crystal Logo with Ambient Pulsing Aura */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-cyan-500/25 to-emerald-400/20 blur-md opacity-75 animate-pulse pointer-events-none" />
+          <motion.div 
+            whileHover={{ scale: 1.1, rotate: 3 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="relative w-9 h-9 flex items-center justify-center cursor-pointer select-none"
+            title="Coditech AI"
+          >
+            <img 
+              src="/coditech-icon.png" 
+              alt="Coditech Logo" 
+              className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(0,245,212,0.5)]" 
+            />
+          </motion.div>
+        </div>
+
+        {/* Clean Single-Line Brand Name with Breathing Room */}
+        <div className="flex items-center gap-2.5 select-none">
+          <span className="text-lg sm:text-xl font-bold tracking-[0.12em] uppercase text-white font-['Space_Grotesk',sans-serif] flex items-center">
+            CODI<span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(45,212,191,0.35)]">TECH</span>
+          </span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-mono font-semibold bg-white/[0.05] text-cyan-300/90 border border-white/[0.1] tracking-wider uppercase">
+            v2.4
+          </span>
         </div>
       </div>
 
       <div className="flex items-center gap-2.5">
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-white/[0.08] text-xs text-slate-300">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-white/[0.08] text-xs text-slate-300 shadow-sm">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
           </span>
-          <span className="text-[11px] font-medium text-slate-300">14,000+ rules engine active</span>
+          <span className="text-[11px] font-medium text-slate-300 font-mono">Offline-First Engine</span>
         </div>
 
         <motion.button
