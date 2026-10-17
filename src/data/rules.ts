@@ -186,7 +186,185 @@ if (typeof window !== "undefined") {
 }
 
 /**
+ * Static Raw Code Syntax Inspector:
+ * Catches syntax errors directly from raw broken code snippets (unclosed brackets, colons, quotes)
+ * without requiring a terminal compiler error message.
+ */
+export function inspectRawCode(code: string, selectedLang: string): DiagnosticRule | null {
+  const clean = code.trim();
+  if (!clean) return null;
+
+  const targetLangLower = (selectedLang || "").toLowerCase();
+  const isPython = targetLangLower === "python" || (!targetLangLower && (clean.includes("def ") || clean.includes("print(")));
+
+  // 1. Bracket / Parenthesis balance check
+  const openParen = (clean.match(/\(/g) || []).length;
+  const closeParen = (clean.match(/\)/g) || []).length;
+  if (openParen > closeParen) {
+    const diff = openParen - closeParen;
+    const closingSuffix = ")".repeat(diff);
+    return {
+      category: isPython ? "Python" : "Syntax",
+      langs: [selectedLang || "Python"],
+      re: /(?:)/,
+      title: "SyntaxError: '(' was never closed",
+      what: `Your code opened ${openParen} parenthesis '(' but only closed ${closeParen}. A closing ')' was never closed before the end of the line or file.`,
+      why: [
+        "Missing closing parenthesis ')' on a function call or expression.",
+        "A multi-line function call or parameter list was left open.",
+        "Mismatched nested brackets."
+      ],
+      fix: [
+        `Add ${diff > 1 ? diff + " closing parentheses" : "a closing ')'"} where the statement concludes.`,
+        "Check every '(' from left to right to ensure each pair is properly terminated."
+      ],
+      code: `${clean}${closingSuffix}`
+    };
+  }
+
+  // 2. Square Bracket balance check
+  const openSquare = (clean.match(/\[/g) || []).length;
+  const closeSquare = (clean.match(/\]/g) || []).length;
+  if (openSquare > closeSquare) {
+    const diff = openSquare - closeSquare;
+    return {
+      category: "Syntax",
+      langs: [selectedLang || "Other"],
+      re: /(?:)/,
+      title: "SyntaxError: '[' was never closed",
+      what: `Your code opened a square bracket '[' that was not closed with a matching ']'.`,
+      why: [
+        "Unclosed list or array literal.",
+        "Incomplete slice or index access."
+      ],
+      fix: [
+        "Add a matching ']' to close the list or index."
+      ],
+      code: `${clean}${"]".repeat(diff)}`
+    };
+  }
+
+  // 3. Curly Brace balance check
+  const openCurly = (clean.match(/\{/g) || []).length;
+  const closeCurly = (clean.match(/\}/g) || []).length;
+  if (openCurly > closeCurly) {
+    const diff = openCurly - closeCurly;
+    return {
+      category: "Syntax",
+      langs: [selectedLang || "Other"],
+      re: /(?:)/,
+      title: "SyntaxError: '{' was never closed",
+      what: `Your code opened a curly brace '{' that was not closed with a matching '}'.`,
+      why: [
+        "Unclosed dictionary, object literal, or block scope."
+      ],
+      fix: [
+        "Add a matching '}' to close the block or dictionary."
+      ],
+      code: `${clean}${'}'.repeat(diff)}`
+    };
+  }
+
+  // 4. Python Specific: Missing Colon (:)
+  if (isPython) {
+    const lines = clean.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      if (/^(if|elif|else|for|while|def|class|try|except|finally|with)\b/i.test(trimmed)) {
+        if (!trimmed.endsWith(':') && !trimmed.endsWith('\\') && !trimmed.includes('#')) {
+          const keyword = trimmed.split(/\s+/)[0];
+          return {
+            category: "Python",
+            langs: ["Python"],
+            re: /(?:)/,
+            title: `SyntaxError: Expected ':' at end of '${keyword}' statement`,
+            what: `Python requires a colon ':' at the end of every '${keyword}' header to indicate the start of an indented block.`,
+            why: [
+              `Omitted colon ':' after the '${keyword}' expression.`,
+              "Accidental typo or incomplete line."
+            ],
+            fix: [
+              `Add a colon ':' at the end of line ${i + 1}: '${trimmed}:'`
+            ],
+            code: lines.map((l, idx) => idx === i ? `${l.trimEnd()}:` : l).join('\n')
+          };
+        }
+      }
+    }
+
+    // 5. Python: Single '=' in condition
+    const ifAssignMatch = clean.match(/^(\s*if\s+[a-zA-Z0-9_.]+\s*)=\s*([a-zA-Z0-9_."']+.*)$/m);
+    if (ifAssignMatch && !clean.includes('==') && !clean.includes('!=')) {
+      return {
+        category: "Python",
+        langs: ["Python"],
+        re: /(?:)/,
+        title: "SyntaxError: Invalid Assignment in 'if' Condition",
+        what: "You used a single '=' (assignment operator) inside an 'if' condition instead of '==' (equality comparison).",
+        why: [
+          "Single '=' sets a variable, whereas '==' tests if two values are equal.",
+          "Python forbids assignment statements inside standard 'if' conditions."
+        ],
+        fix: [
+          "Replace '=' with '==' to compare values."
+        ],
+        code: clean.replace(/(if\s+[a-zA-Z0-9_.]+\s*)=\s*/, '$1== ')
+      };
+    }
+  }
+
+  // 6. Unterminated string quotes
+  const lines = clean.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes("'''") || line.includes('"""')) continue;
+    const singleQuotes = (line.match(/(?<!\\)'/g) || []).length;
+    const doubleQuotes = (line.match(/(?<!\\)"/g) || []).length;
+    if (singleQuotes % 2 !== 0) {
+      return {
+        category: "Syntax",
+        langs: [selectedLang || "Other"],
+        re: /(?:)/,
+        title: "SyntaxError: Unterminated String Literal (Single Quote)",
+        what: `A string opened with a single quote (') on line ${i + 1} was never closed before the end of the line.`,
+        why: [
+          "Missing closing single quote (').",
+          "String extends across multiple lines without using triple quotes."
+        ],
+        fix: [
+          "Add matching single quote (') before ending the line.",
+          "Use triple quotes (''' or \"\"\") if you want a multi-line string."
+        ],
+        code: lines.map((l, idx) => idx === i ? `${l}'` : l).join('\n')
+      };
+    }
+    if (doubleQuotes % 2 !== 0) {
+      return {
+        category: "Syntax",
+        langs: [selectedLang || "Other"],
+        re: /(?:)/,
+        title: "SyntaxError: Unterminated String Literal (Double Quote)",
+        what: `A string opened with a double quote (\") on line ${i + 1} was never closed before the end of the line.`,
+        why: [
+          "Missing closing double quote (\")."
+        ],
+        fix: [
+          "Add matching double quote (\") before ending the line."
+        ],
+        code: lines.map((l, idx) => idx === i ? `${l}"` : l).join('\n')
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * High-performance analyzer:
+ * 0. Static Raw Code Syntax Inspector (catches unclosed brackets, colons, quotes)
  * 1. Checks fast CORE_RULES (< 0.05ms)
  * 2. Checks language bucket (< 0.1ms)
  * 3. Falls back to universal rules
@@ -194,6 +372,10 @@ if (typeof window !== "undefined") {
 export function analyzeError(errorText: string, selectedLang: string): DiagnosticRule | null {
   const clean = errorText.trim();
   if (!clean) return null;
+
+  // Tier 0: Check raw code syntax heuristics directly (< 0.01ms)
+  const rawCodeMatch = inspectRawCode(clean, selectedLang);
+  if (rawCodeMatch) return rawCodeMatch;
 
   const targetLangLower = (selectedLang || "").toLowerCase();
 
