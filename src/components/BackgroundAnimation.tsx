@@ -7,7 +7,7 @@ export const BackgroundAnimation: React.FC = () => {
       <div className="absolute inset-0">
         <img
           src="/hellspires-bg.jpg"
-          alt=""
+          alt="Cinematic Hellspires Background" width="1920" height="1080"
           className="w-full h-full object-cover object-top opacity-40 sm:opacity-50 select-none scale-[1.02] filter contrast-110 brightness-95"
           loading="eager"
         />

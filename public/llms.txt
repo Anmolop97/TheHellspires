@@ -1,0 +1,12 @@
+# Coditech (The Hellspires)
+
+> AI-Powered Code Debugger & Interactive Error Solver for systems developers, C programmers, and software engineers.
+
+- Platform URL: https://thehellspires.vercel.app/
+- Author / Creator: Anmol Kumar (https://portfolio.anmolkumar.workers.dev/)
+- GitHub Repository: https://github.com/Anmolop97/TheHellspires
+
+## Core Capabilities
+- Diagnostics: Segmentation fault analysis, memory leak detection, compiler error explanation
+- Stacks Supported: C, C++, Systems Architecture, Linux CLI, Modern Web
+- Purpose: Root-cause debugging education, memory inspection, and real-time development acceleration

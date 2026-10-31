@@ -21,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
           <div className="w-8 h-8 flex items-center justify-center">
             <img 
               src="/coditech-icon.png" 
-              alt="Coditech Logo" 
+              alt="Coditech Logo" width="32" height="32" 
               className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(0,245,212,0.4)]" 
             />
           </div>

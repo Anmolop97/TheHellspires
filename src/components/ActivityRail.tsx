@@ -33,7 +33,7 @@ export const ActivityRail: React.FC<ActivityRailProps> = ({
         >
           <img 
             src="/coditech-icon.png" 
-            alt="Coditech Logo" 
+            alt="Coditech Logo" width="36" height="36" 
             className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(0,245,212,0.45)]" 
           />
         </motion.div>
