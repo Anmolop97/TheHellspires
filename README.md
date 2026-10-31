@@ -65,7 +65,7 @@ npm run build
 ## 🤝 Creators & Contributors
 
 Crafted with ❤️ by:
-- **Anmol Kumar** — [@Anmolop97](https://github.com/Anmolop97)
+- **Anmol Kumar** — [Anmol Kumar Portfolio](https://portfolio.anmolkumar.workers.dev) • [@Anmolop97](https://github.com/Anmolop97)
 - **Anand** — [@anand05-cell](https://github.com/anand05-cell)
 
 ---
